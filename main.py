@@ -1,51 +1,45 @@
+import pytest
 from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
 
-
-# Настройка WebDriver
+# Фикстура для инициализации и закрытия драйвера
+@pytest.fixture(scope="module")
 def setup_driver():
-    # Используем Service для работы с драйвером
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)
-    return driver
+    yield driver
+    driver.quit()
 
+# Тест авторизации
+def test_basic_auth(setup_driver):
+    driver = setup_driver
+    # Вставьте данные для авторизации в URL
+    driver.get("http://admin:admin@the-internet.herokuapp.com/basic_auth")
+    # Даем время на загрузку страницы
+    driver.implicitly_wait(5)
+    # Проверяем, что страница содержит текст "Congratulations"
+    assert "Congratulations" in driver.page_source, "Ошибка: Авторизация не выполнена"
 
-# Тест 1: Проверка авторизации
-def test_basic_auth(driver):
-    print("Запуск теста: Проверка авторизации...")
-    driver.get("https://admin:admin@the-internet.herokuapp.com/basic_auth")  # Вход с базовой авторизацией
-    assert "Congratulations" in driver.page_source, "Авторизация не удалась!"
-    driver.save_screenshot("basic_auth_success.png")
-    print("Тест успешно завершён: Проверка авторизации")
-
-
-# Тест 2: Работа с чекбоксами
-def test_checkboxes(driver):
-    print("Запуск теста: Работа с чекбоксами...")
+# Тест работы с чекбоксами
+def test_checkboxes(setup_driver):
+    driver = setup_driver
     driver.get("https://the-internet.herokuapp.com/checkboxes")
     checkboxes = driver.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
     for checkbox in checkboxes:
         if not checkbox.is_selected():
             checkbox.click()
-    driver.save_screenshot("checkboxes_checked.png")
-    assert all(checkbox.is_selected() for checkbox in checkboxes), "Не все чекбоксы включены!"
-    print("Тест успешно завершён: Работа с чекбоксами")
+    assert all(cb.is_selected() for cb in checkboxes), "Ошибка: Не все чекбоксы выбраны"
 
-
-# Тест 3: Загрузка файла
-def test_file_upload(driver):
-    print("Запуск теста: Загрузка файла...")
+# Тест загрузки файла
+def test_file_upload(setup_driver):
+    driver = setup_driver
     driver.get("https://the-internet.herokuapp.com/upload")
     file_input = driver.find_element(By.ID, "file-upload")
-    file_input.send_keys(r"C:\Users\Arseniy\Desktop\WorkaemPythonPrak4\Text.txt")  # Укажите путь к вашему файлу
+    file_input.send_keys(r"C:\Users\Arseniy\Desktop\WorkaemPythonPrak4\Text.txt")  # Укажите ваш путь к файлу
     driver.find_element(By.ID, "file-submit").click()
-    assert "File Uploaded!" in driver.page_source, "Ошибка: файл не был загружен!"
-    driver.save_screenshot("file_upload_success.png")
-    print("Тест успешно завершён: Загрузка файла")
-
-
+    assert "File Uploaded!" in driver.page_source, "Ошибка: файл не загружен"
 # Основной блок
 def run_tests(close_after_tests=True):
     driver = setup_driver()
@@ -61,3 +55,4 @@ def run_tests(close_after_tests=True):
 
 if __name__ == "__main__":
     run_tests(close_after_tests=False)
+
